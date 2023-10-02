@@ -9,8 +9,6 @@ import "../../lib/strings.sol";
 
 interface IFlexiPunkTLD is IERC721 {
 
-  function balanceOf(address) override external view returns(uint256);
-
   function mint(
     string memory _domainName,
     address _domainHolder,
@@ -19,10 +17,16 @@ interface IFlexiPunkTLD is IERC721 {
 
 }
 
+// simple punk minter contract
+// - no minting restrictions (anyone can mint)
+// - tiered pricing
+// - revenue goes to the revenue distributor contract address
 contract ZksoulMinter is Ownable, ReentrancyGuard {
-  bool public paused = true;
+  address public distributorAddress; // revenue distributor contract address
 
-  uint256 public referralFee; // share of each domain purchase (in bips) that goes to the referrer
+  bool public paused = false;
+
+  uint256 public referralFee = 1000; // share of each domain purchase (in bips) that goes to the referrer
   uint256 public constant MAX_BPS = 10_000;
 
   uint256 public price1char; // 1 char domain price
@@ -35,17 +39,16 @@ contract ZksoulMinter is Ownable, ReentrancyGuard {
 
   // CONSTRUCTOR
   constructor(
+    address _distributorAddress,
     address _tldAddress,
-    uint256 _referralFee,
     uint256 _price1char,
     uint256 _price2char,
     uint256 _price3char,
     uint256 _price4char,
     uint256 _price5char
   ) {
+    distributorAddress = _distributorAddress;
     tldContract = IFlexiPunkTLD(_tldAddress);
-
-    referralFee = _referralFee;
 
     price1char = _price1char;
     price2char = _price2char;
@@ -58,7 +61,7 @@ contract ZksoulMinter is Ownable, ReentrancyGuard {
 
   function mint(
     string memory _domainName,
-    address _domainHolder, // redundant, but kept for consistency in the frontend template
+    address _domainHolder,
     address _referrer
   ) external nonReentrant payable returns(uint256 tokenId) {
     require(!paused, "Minting paused");
@@ -79,25 +82,21 @@ contract ZksoulMinter is Ownable, ReentrancyGuard {
       selectedPrice = price5char;
     }
 
-    // if user does not own a .zksoul domain yet and they wish to mint a 5+ char domain, they can get it for free
-    // otherwise, they need to pay the selected price
-    if (domainLength < 5 || tldContract.balanceOf(_msgSender()) > 0) {
-      require(msg.value >= selectedPrice, "Value below price");
+    require(msg.value >= selectedPrice, "Value below price");
 
-      // send referral fee
-      if (referralFee > 0 && _referrer != address(0)) {
-        uint256 referralPayment = (selectedPrice * referralFee) / MAX_BPS;
-        (bool sentReferralFee, ) = payable(_referrer).call{value: referralPayment}("");
-        require(sentReferralFee, "Failed to send referral fee");
-      }
-
-      // send the rest to TLD owner
-      (bool sent, ) = payable(owner()).call{value: address(this).balance}("");
-      require(sent, "Failed to send domain payment to TLD owner");
+    // send referral fee
+    if (referralFee > 0 && _referrer != address(0)) {
+      uint256 referralPayment = (selectedPrice * referralFee) / MAX_BPS;
+      (bool sentReferralFee, ) = _referrer.call{value: referralPayment}("");
+      require(sentReferralFee, "Failed to send referral fee");
     }
 
+    // send the rest to distributor
+    (bool sent, ) = distributorAddress.call{value: address(this).balance}("");
+    require(sent, "Failed to send domain payment to distributor contract");
+
     // mint a domain
-    tokenId = tldContract.mint{value: 0}(_domainName, _msgSender(), address(0));
+    tokenId = tldContract.mint{value: 0}(_domainName, _domainHolder, address(0));
   }
 
   // OWNER
@@ -138,16 +137,16 @@ contract ZksoulMinter is Ownable, ReentrancyGuard {
     IERC20(tokenAddress_).transfer(recipient_, tokenAmount_);
   }
 
-  /// @notice Recover any ERC-721 token mistakenly sent to this contract address
-  function recoverERC721(address tokenAddress_, uint256 tokenId_, address recipient_) external onlyOwner {
-    IERC721(tokenAddress_).transferFrom(address(this), recipient_, tokenId_);
+  /// @notice This changes the distributor address in the minter contract
+  function setDistributorAddress(address _distributorAddress) external onlyOwner {
+    distributorAddress = _distributorAddress;
   }
 
   function togglePaused() external onlyOwner {
     paused = !paused;
   }
 
-  // recover ETH from contract
+  // withdraw ETH from contract
   function withdraw() external onlyOwner {
     (bool success, ) = owner().call{value: address(this).balance}("");
     require(success, "Failed to withdraw ETH from contract");
