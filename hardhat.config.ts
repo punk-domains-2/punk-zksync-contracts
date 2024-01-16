@@ -34,7 +34,7 @@ module.exports = {
   etherscan: {
     apiKey: {
       zkSyncTestnet: "randomstring",
-      zkSyncMainnet: "randomstring"
+      zkSyncMainnet: process.env.BLOCK_EXPLORER_API_KEY
     },
 
     customChains: [
@@ -52,8 +52,8 @@ module.exports = {
         network: "zkSyncMainnet",
         chainId: 324,
         urls: {
-          apiURL: "https://zksync2-mainnet.zkscan.io/api",
-          browserURL: "https://zksync2-mainnet.zkscan.io/"
+          apiURL: "https://era.zksync.network/api", // "https://api-era.zksync.network/api", // "https://zksync2-mainnet.zkscan.io/api",
+          browserURL: "https://era.zksync.network/"
         }
       }
       
