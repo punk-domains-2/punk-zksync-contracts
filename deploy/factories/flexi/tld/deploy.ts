@@ -1,7 +1,7 @@
 // make sure you have the args file, even if it's an empty array
 // create a separate folder for each smart contract deployment (with deploy and args files)
 // after deployment, add factory address to the ForbiddenTlds whitelist and to the Resolver
-// npx hardhat deploy-zksync --script deploy/factories/flexi/tld/deploy.ts --network zkSyncTestnet
+// npx hardhat deploy-zksync --script deploy/factories/flexi/tld/deploy.ts --network zkSyncMainnet
 
 import { Wallet, utils } from "zksync-web3";
 import * as ethers from "ethers";

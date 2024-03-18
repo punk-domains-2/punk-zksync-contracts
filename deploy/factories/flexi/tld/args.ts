@@ -1,5 +1,5 @@
 module.exports = [
-  "80000000000000000000", // TLD price
-  "0x80014cC4e645Bc0193dcE0EeCAe7Ef449c66D702", // PunkForbiddenTlds address
-  "0x027a5e79b08818d3E7f3f5D6C41c4f9de49ef3D8" // PunkFlexiMetadata address
+  "40000000000000000000", // TLD price
+  "0xbE6B3B0668d40FA042E2209462ED660AAf5874c7", // PunkForbiddenTlds address
+  "0x78af957BE6EDB05F56a1b9E72567eAB5F83113c5" // PunkFlexiMetadata address
 ];
